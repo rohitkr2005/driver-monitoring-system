@@ -10,3 +10,4 @@ requests
 sqlalchemy
 passlib[bcrypt]
 python-multipart
+pandas

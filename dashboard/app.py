@@ -1,10 +1,29 @@
 import streamlit as st
 import requests
 import pandas as pd
+import time
 
-BASE_URL = "http://127.0.0.1:8000"
+BASE_URL = "https://driver-monitoring-backend-2lbb.onrender.com"
 
-st.set_page_config(page_title="Driver Monitoring Dashboard", layout="wide")
+st.set_page_config(
+    page_title="Driver Monitoring Dashboard",
+    layout="wide",
+    page_icon="🚗"
+)
+
+# ---------------- CUSTOM STYLE ----------------
+st.markdown("""
+<style>
+.main {
+    background-color: #0e1117;
+}
+.stButton>button {
+    border-radius: 10px;
+    height: 3em;
+    width: 100%;
+}
+</style>
+""", unsafe_allow_html=True)
 
 # ---------------- SESSION ----------------
 if "logged_in" not in st.session_state:
@@ -13,32 +32,46 @@ if "logged_in" not in st.session_state:
 if "page" not in st.session_state:
     st.session_state.page = "login"
 
-# ---------------- LOGIN PAGE ----------------
+# ---------------- API HELPER ----------------
+def api_request(method, endpoint, params=None):
+    try:
+        url = f"{BASE_URL}{endpoint}"
+        if method == "GET":
+            response = requests.get(url, params=params, timeout=10)
+        else:
+            response = requests.post(url, params=params, timeout=10)
+        return response
+    except:
+        return None
+
+# ---------------- LOGIN ----------------
 def login_page():
     st.title("🔐 Admin Login")
 
-    username = st.text_input("Username")
-    password = st.text_input("Password", type="password")
+    col1, col2 = st.columns([1,1])
+    with col1:
+        username = st.text_input("Username")
+    with col2:
+        password = st.text_input("Password", type="password")
 
     if st.button("Login"):
-        response = requests.post(
-            f"{BASE_URL}/login",
-            params={"username": username, "password": password}
-        )
+        response = api_request("POST", "/login", {
+            "username": username,
+            "password": password
+        })
 
-        if response.status_code == 200:
+        if response and response.status_code == 200:
             st.session_state.logged_in = True
             st.success("Login Successful ✅")
             st.rerun()
         else:
-            st.error("Invalid Credentials ❌")
+            st.error("Invalid Credentials / Server Error ❌")
 
-    st.write("Don't have an account?")
     if st.button("Go to Signup"):
         st.session_state.page = "signup"
         st.rerun()
 
-# ---------------- SIGNUP PAGE ----------------
+# ---------------- SIGNUP ----------------
 def signup_page():
     st.title("🆕 Create Admin Account")
 
@@ -46,13 +79,13 @@ def signup_page():
     password = st.text_input("Choose Password", type="password")
 
     if st.button("Signup"):
-        response = requests.post(
-            f"{BASE_URL}/signup",
-            params={"username": username, "password": password}
-        )
+        response = api_request("POST", "/signup", {
+            "username": username,
+            "password": password
+        })
 
-        if response.status_code == 200:
-            st.success("Account Created Successfully ✅")
+        if response and response.status_code == 200:
+            st.success("Account Created ✅")
             st.session_state.page = "login"
             st.rerun()
         else:
@@ -66,65 +99,78 @@ def signup_page():
 def dashboard():
     st.title("🚗 Driver Monitoring Dashboard")
 
-    # Logout
+    # Sidebar
+    st.sidebar.title("📊 Menu")
+
     if st.sidebar.button("Logout"):
         st.session_state.logged_in = False
-        st.session_state.page = "login"
         st.rerun()
 
-    st.sidebar.title("Menu")
-
-    option = st.sidebar.selectbox(
-        "Choose Option",
-        ["Add Vehicle", "View Vehicles", "Live Alerts"]
+    page = st.sidebar.radio(
+        "Navigate",
+        ["📊 Overview", "➕ Add Vehicle", "🚗 Vehicles", "🚨 Alerts"]
     )
 
+    # -------- OVERVIEW --------
+    if page == "📊 Overview":
+        st.subheader("System Overview")
+
+        col1, col2, col3 = st.columns(3)
+
+        vehicles_res = api_request("GET", "/vehicles")
+        alerts_res = api_request("GET", "/alerts")
+
+        total_vehicles = len(vehicles_res.json()) if vehicles_res and vehicles_res.status_code == 200 else 0
+        total_alerts = len(alerts_res.json()) if alerts_res and alerts_res.status_code == 200 else 0
+
+        col1.metric("Total Vehicles", total_vehicles)
+        col2.metric("Total Alerts", total_alerts)
+        col3.metric("System Status", "🟢 Online")
+
     # -------- ADD VEHICLE --------
-    if option == "Add Vehicle":
-        st.subheader("➕ Add New Vehicle")
+    elif page == "➕ Add Vehicle":
+        st.subheader("Add Vehicle")
 
         vehicle_no = st.text_input("Vehicle Number")
         dashcam_id = st.text_input("Dashcam ID")
 
-        if st.button("Add Vehicle"):
-            response = requests.post(
-                f"{BASE_URL}/add_vehicle",
-                params={
-                    "vehicle_no": vehicle_no,
-                    "dashcam_id": dashcam_id
-                }
-            )
+        if st.button("Add"):
+            res = api_request("POST", "/add_vehicle", {
+                "vehicle_no": vehicle_no,
+                "dashcam_id": dashcam_id
+            })
 
-            if response.status_code == 200:
+            if res and res.status_code == 200:
                 st.success("Vehicle Added ✅")
             else:
-                st.error("Error adding vehicle ❌")
+                st.error("Failed ❌")
 
-    # -------- VIEW VEHICLES --------
-    elif option == "View Vehicles":
-        st.subheader("📋 Registered Vehicles")
+    # -------- VEHICLES --------
+    elif page == "🚗 Vehicles":
+        st.subheader("Registered Vehicles")
 
-        response = requests.get(f"{BASE_URL}/vehicles")
+        res = api_request("GET", "/vehicles")
 
-        if response.status_code == 200:
-            data = response.json()
+        if res and res.status_code == 200:
+            data = res.json()
             if data:
                 df = pd.DataFrame(data)
-                st.dataframe(df)
+                st.dataframe(df, use_container_width=True)
             else:
                 st.info("No vehicles found")
+        else:
+            st.error("Error fetching data ❌")
 
-    # -------- LIVE ALERTS --------
-    elif option == "Live Alerts":
-        st.subheader("🚨 Live Alerts")
+    # -------- ALERTS --------
+    elif page == "🚨 Alerts":
+        st.subheader("Live Alerts")
 
-        if st.button("🔄 Refresh Alerts"):
-            pass
+        auto_refresh = st.checkbox("Auto Refresh (5s)")
 
-        response = requests.get(f"{BASE_URL}/alerts")
+        res = api_request("GET", "/alerts")
 
-        if response.status_code == 200:
-            data = response.json()
+        if res and res.status_code == 200:
+            data = res.json()
 
             if data:
                 df = pd.DataFrame(data)
@@ -132,14 +178,20 @@ def dashboard():
                 if "timestamp" in df.columns:
                     df["timestamp"] = pd.to_datetime(df["timestamp"])
 
-                st.dataframe(df)
+                st.dataframe(df, use_container_width=True)
 
                 latest = df.iloc[-1]
-                st.warning(
-                    f"⚠ Latest Alert: {latest['alert_type']} from {latest['vehicle_id']}"
+                st.error(
+                    f"🚨 Latest Alert: {latest['alert_type']} | Vehicle: {latest['vehicle_id']}"
                 )
             else:
-                st.success("No alerts yet 🎉")
+                st.success("No alerts 🎉")
+        else:
+            st.error("Error fetching alerts ❌")
+
+        if auto_refresh:
+            time.sleep(5)
+            st.rerun()
 
 # ---------------- MAIN ----------------
 if not st.session_state.logged_in:
