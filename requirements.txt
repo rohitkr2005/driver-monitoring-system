@@ -1,0 +1,12 @@
+opencv-python
+mediapipe
+numpy
+pygame
+ultralytics
+fastapi
+uvicorn
+streamlit
+requests
+sqlalchemy
+passlib[bcrypt]
+python-multipart
