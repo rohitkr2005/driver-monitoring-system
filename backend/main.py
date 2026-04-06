@@ -1,5 +1,5 @@
 from fastapi import FastAPI
-from routes import auth, vehicle, alert
+from backend.routes import auth, vehicle, alert
 from database import engine
 import models
 
