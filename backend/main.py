@@ -1,10 +1,10 @@
 from fastapi import FastAPI
 from backend.routes import auth, vehicle, alert
-from database import engine
-import models
+from backend.database import engine
+import backend.models
 
 # CREATE TABLES
-models.Base.metadata.create_all(bind=engine)
+backend.models.Base.metadata.create_all(bind=engine)
 
 app = FastAPI()
 

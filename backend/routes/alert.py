@@ -1,6 +1,6 @@
 from fastapi import APIRouter
-from database import SessionLocal
-from models import Alert
+from backend.database import SessionLocal
+from backend.models import Alert
 
 router = APIRouter()
 

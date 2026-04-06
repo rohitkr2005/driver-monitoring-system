@@ -1,6 +1,6 @@
 from fastapi import APIRouter
-from database import SessionLocal
-from models import Vehicle
+from backend.database import SessionLocal
+from backend.models import Vehicle
 
 router = APIRouter()
 
