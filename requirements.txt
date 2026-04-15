@@ -2,16 +2,16 @@ streamlit
 requests
 pandas
 
-# opencv-python
-# mediapipe
-# numpy
-# pygame
-# ultralytics
-# fastapi
-# uvicorn
-# streamlit
-# requests
-# sqlalchemy
-# passlib[bcrypt]
-# python-multipart
-# pandas
+opencv-python
+mediapipe
+numpy
+pygame
+ultralytics
+fastapi
+uvicorn[standard]
+streamlit
+requests
+sqlalchemy
+passlib[bcrypt]
+python-multipart
+pandas
