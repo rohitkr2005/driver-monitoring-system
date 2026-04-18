@@ -17,12 +17,15 @@ def get_db():
 
 @router.post("/signup")
 def signup(username: str, password: str, db: Session = Depends(get_db)):
+    # Check if username already exists
+    existing = db.query(Admin).filter(Admin.username == username).first()
+    if existing:
+        raise HTTPException(status_code=400, detail="Username already exists")
+    
     hashed = pwd_context.hash(password)
-
     admin = Admin(username=username, password=hashed)
     db.add(admin)
     db.commit()
-
     return {"message": "Admin created"}
 
 @router.post("/login")
