@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from backend.database import SessionLocal
-from backend.models import Admin
+from backend.models import Admin, Alert
 from passlib.context import CryptContext
 
 router = APIRouter()
@@ -36,3 +36,10 @@ def login(username: str, password: str, db: Session = Depends(get_db)):
         raise HTTPException(status_code=401, detail="Invalid credentials")
 
     return {"message": "Login successful"}
+
+@router.post("/add_alert")   # must be POST
+def add_alert(vehicle_id: str, alert_type: str, db: Session = Depends(get_db)):
+    alert = Alert(vehicle_id=vehicle_id, alert_type=alert_type)
+    db.add(alert)
+    db.commit()
+    return {"message": "Alert saved"}

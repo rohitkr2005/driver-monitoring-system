@@ -1,25 +1,33 @@
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
+from sqlalchemy.orm import Session
 from backend.database import SessionLocal
 from backend.models import Alert
 
 router = APIRouter()
 
 def get_db():
-    return SessionLocal()
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
 
 @router.post("/alert")
-def receive_alert(vehicle_id: str, alert_type: str):
-    db = get_db()
-
+def receive_alert(vehicle_id: str, alert_type: str, db: Session = Depends(get_db)):
     alert = Alert(vehicle_id=vehicle_id, alert_type=alert_type)
     db.add(alert)
     db.commit()
-
     return {"message": "Alert received"}
 
 @router.get("/alerts")
-def get_alerts():
-    db = get_db()
+def get_alerts(db: Session = Depends(get_db)):
     alerts = db.query(Alert).all()
-
-    return alerts
+    return [
+        {
+            "id": a.id,
+            "vehicle_id": a.vehicle_id,
+            "alert_type": a.alert_type,
+            "timestamp": a.timestamp
+        }
+        for a in alerts
+    ]
